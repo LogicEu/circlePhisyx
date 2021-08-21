@@ -1,0 +1,6 @@
+[submodule "glee"]
+	path = glee
+	url = git@github.com:LogicEu/glee.git
+[submodule "fract"]
+	path = fract
+	url = git@github.com:LogicEu/fract.git
