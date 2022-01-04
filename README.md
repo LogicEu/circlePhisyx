@@ -1,3 +1,4 @@
-# circlePhisyx
+# flock
 >
-> Simple circle collisions and basic physics in OpenGL
+> Simple OpenGL experiment on the flock algorithm.
+>
