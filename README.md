@@ -1,4 +1,4 @@
-# flock
+# circlePhisyx
 >
-> Simple OpenGL experiment on the flock algorithm.
+> Simple physics gravity and collision test between circles.
 >
