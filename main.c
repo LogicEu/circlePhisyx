@@ -11,6 +11,7 @@
 
 vec2 mouse, resolution, cam;
 int mouseHand = 0;
+float scale = 1.0;
 
 vec3 rand_position()
 {
@@ -75,7 +76,8 @@ void spawn_circles(const unsigned int count, vec3* positions, vec4* colors, vec2
 void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* positions, vec2* velocities, int* marked, float deltaTime)
 {
     unsigned int mouseDown = glee_mouse_down(GLFW_MOUSE_BUTTON_LEFT);
-    vec2 mMouse = _vec2_add(mouse, cam);
+    vec2 mMouse = _vec2_div(mouse, scale);
+    mMouse = vec2_add(mMouse, cam);
 
     for (unsigned int i = 0; i < count; i++) {
 
@@ -159,9 +161,9 @@ void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* p
 
         //Draw the circles
         vec3 pos = {
-            positions[i].x - cam.x,
-            positions[i].y - cam.y,
-            positions[i].z
+            (positions[i].x - cam.x) * scale,
+            (positions[i].y - cam.y) * scale,
+            positions[i].z * scale
         };
         glee_shader_uniform_set(shader, 3, "u_pos", &pos);
         glee_shader_uniform_set(shader, 4, "u_color", &colors[i]);
@@ -202,7 +204,7 @@ int main(int argc, char** argv)
     printf("Resolution: %dx%d\n", (int)resolution.x, (int)resolution.y);
 
     glee_init();
-    glee_window_create("gravity2D", resolution.x, resolution.y, fullscreen, 0);
+    glee_window_create("gravity2D", (int)resolution.x, (int)resolution.y, fullscreen, 0);
     glee_screen_color(0.0, 0.0, 0.0, 1.0);
 
     glee_buffer_quad_create();
@@ -228,9 +230,18 @@ int main(int argc, char** argv)
         printf("delta time: %f\r", deltaTime);
         
         // Input
+#define SPEED 10.0
         glee_mouse_pos(&mouse.x, &mouse.y);
         if (glee_key_pressed(GLFW_KEY_ESCAPE)) break;
         if (glee_key_pressed(GLFW_KEY_R)) spawn_circles(count, &positions[0], &colors[0], &velocities[0]);
+        if (glee_key_down(GLFW_KEY_Z)) scale += deltaTime;
+        else if (glee_key_down(GLFW_KEY_X)) scale -= deltaTime;
+        
+        if (glee_key_down(GLFW_KEY_W)) cam.y += SPEED * deltaTime * scale;
+        if (glee_key_down(GLFW_KEY_S)) cam.y -= SPEED * deltaTime * scale;
+        if (glee_key_down(GLFW_KEY_D)) cam.x += SPEED * deltaTime * scale;
+        if (glee_key_down(GLFW_KEY_A)) cam.x -= SPEED * deltaTime * scale;
+        
         unsigned int mouseDown = glee_mouse_down(GLFW_MOUSE_BUTTON_LEFT);
         if (glee_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) mouseMark = mouse;
         if (mouseDown && !mouseHand) {
