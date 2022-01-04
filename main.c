@@ -9,11 +9,12 @@
 #define SCR_WIDTH 800
 #define SCR_HEIGHT 600
 
-vec2 mouse, resolution;
+vec2 mouse, resolution, cam;
+int mouseHand = 0;
 
 vec3 rand_position()
 {
-#define RAD_MIN 10.0f
+#define RAD_MIN 10.0
 #define RAD_MAX 20.0
     float z = randf_norm() * RAD_MAX + RAD_MIN;
     vec3 v = {
@@ -54,6 +55,7 @@ vec2 vec2_lerp(vec2 v1, vec2 v2)
 
 void spawn_circles(const unsigned int count, vec3* positions, vec4* colors, vec2* velocities)
 {
+    cam = vec2_uni(0.0);
     for (unsigned int i = 0; i < count; i++) {
         velocities[i] = vec2_uni(0.0);
         colors[i] = rand_color();
@@ -73,19 +75,21 @@ void spawn_circles(const unsigned int count, vec3* positions, vec4* colors, vec2
 void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* positions, vec2* velocities, int* marked, float deltaTime)
 {
     unsigned int mouseDown = glee_mouse_down(GLFW_MOUSE_BUTTON_LEFT);
+    vec2 mMouse = _vec2_add(mouse, cam);
 
     for (unsigned int i = 0; i < count; i++) {
 
-        if (circle_point_overlap(*(Circle*)&positions[i], mouse)) {
+        if (circle_point_overlap(*(Circle*)&positions[i], mMouse)) {
             if (!marked[i]) {
                 colors[i] = color_neg(colors[i]);
                 marked[i] = 1;
             }
             if (mouseDown) {
-                velocities[i] = vec2_mult(vec2_sub(mouse, *(vec2*)&positions[i]), 10.0);
-                positions[i].x = mouse.x;
-                positions[i].y = mouse.y;
-            }
+                velocities[i] = vec2_mult(vec2_sub(mMouse, *(vec2*)&positions[i]), 10.0);
+                positions[i].x = mMouse.x;
+                positions[i].y = mMouse.y;
+                mouseHand = 1;
+            } else mouseHand = 0;
         } else if (marked[i]) {
             colors[i] = color_neg(colors[i]);
             marked[i] = 0;
@@ -141,10 +145,10 @@ void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* p
         }
 
         // Collide with screen walls
-        if (dif.x > resolution.x - positions[i].z || 
+        /*if (dif.x > resolution.x - positions[i].z || 
             dif.x < positions[i].z) velocities[i].x = -velocities[i].x;
         if (dif.y > resolution.y - positions[i].z ||
-            dif.y < positions[i].z) velocities[i].y = -velocities[i].y;
+            dif.y < positions[i].z) velocities[i].y = -velocities[i].y;*/
 
         // Apply velocity to positions
 #define MAX_VEL 400.0f
@@ -154,7 +158,12 @@ void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* p
         positions[i].y += velocities[i].y * deltaTime;
 
         //Draw the circles
-        glee_shader_uniform_set(shader, 3, "u_pos", &positions[i]);
+        vec3 pos = {
+            positions[i].x - cam.x,
+            positions[i].y - cam.y,
+            positions[i].z
+        };
+        glee_shader_uniform_set(shader, 3, "u_pos", &pos);
         glee_shader_uniform_set(shader, 4, "u_color", &colors[i]);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
@@ -210,16 +219,25 @@ int main(int argc, char** argv)
     int marked[count];
     for (int i = 0; i < count; i ++) marked[i] = 0;
 
+    vec2 mouseMark = {0.0, 0.0};
+
     float deltaTime, t = glee_time_get();
     while(glee_window_is_open()) {
         glee_screen_clear();
-        
-        if (glee_key_pressed(GLFW_KEY_ESCAPE)) break;
-        if (glee_key_pressed(GLFW_KEY_R)) spawn_circles(count, &positions[0], &colors[0], &velocities[0]);
-
-        glee_mouse_pos(&mouse.x, &mouse.y);
         deltaTime = glee_time_delta(&t);
         printf("delta time: %f\r", deltaTime);
+        
+        // Input
+        glee_mouse_pos(&mouse.x, &mouse.y);
+        if (glee_key_pressed(GLFW_KEY_ESCAPE)) break;
+        if (glee_key_pressed(GLFW_KEY_R)) spawn_circles(count, &positions[0], &colors[0], &velocities[0]);
+        unsigned int mouseDown = glee_mouse_down(GLFW_MOUSE_BUTTON_LEFT);
+        if (glee_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) mouseMark = mouse;
+        if (mouseDown && !mouseHand) {
+            cam.x -= (mouse.x - mouseMark.x);
+            cam.y -= (mouse.y - mouseMark.y);
+            mouseMark = mouse;
+        }
 
         glUseProgram(shader_back);
         glee_shader_uniform_set(shader_back, 2, "u_mouse", &mouse);

@@ -11,7 +11,7 @@ void main()
     
     float m = smoothstep(pos.z, length(pos.xy - uv), 0.01);
     float n = 0.2 * smoothstep(pos.z * pos.z, length(pos.xy - uv), 0.2);
-    float w = 0.0;//0.1 * clamp(smoothstep(pos.z, length(pos.xy - uv), 0.1), 0.0, 3.0);
+    float w = 0.0;//0.1 * smoothstep(pos.z, length(pos.xy - uv), 0.1);
 
     FragColor = vec4(u_color.xyz, m + n + w);
 }
