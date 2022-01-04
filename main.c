@@ -120,10 +120,6 @@ void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* p
             );
 
             if (circle_overlap_offset(*(Circle*)&positions[i], *(Circle*)&positions[j], vdif)) {
-                //velocities[i] = vec2_mult(vec2_reflect(velocities[i], g), clampf(positions[j].z / positions[i].z, 0.0, 1.0));
-                //velocities[j] = vec2_mult(vec2_reflect(velocities[j], g), clampf(positions[i].z / positions[j].z, 0.0, 1.0));
-                //velocities[i] = vec2_add(velocities[i], vec2_mult(vec2_reflect(velocities[i], g), maxf(positions[j].z / positions[i].z, 1.0)));
-                //velocities[j] = vec2_add(velocities[j], vec2_mult(vec2_reflect(velocities[j], g), maxf(positions[i].z / positions[j].z, 1.0)));
                 float M = positions[i].z + positions[j].z;
                 vec2 v1 = velocities[i], v2 = velocities[j];
                 velocities[i].x = ((positions[i].z - positions[j].z) / M) * v1.x + ((2.0 * positions[j].z) / M) * v2.x;
@@ -136,8 +132,8 @@ void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* p
                 float mag2 = vec2_mag(velocities[j]);
                 vec2 dir2 = vec2_mult(g, mag2);
 
-                velocities[i] = vec2_lerp(dir1, velocities[i]);
-                velocities[j] = vec2_lerp(dir2, velocities[j]);
+                velocities[i] = vec2_mult(vec2_norm(vec2_lerp(dir1, velocities[i])), mag1);
+                velocities[j] = vec2_mult(vec2_norm(vec2_lerp(dir2, velocities[j])), mag2);
             }
 
             while(circle_overlap(*(Circle*)&positions[i], *(Circle*)&positions[j])) {
@@ -145,12 +141,6 @@ void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* p
                 positions[i].y -= g.y;
             }
         }
-
-        // Collide with screen walls
-        /*if (dif.x > resolution.x - positions[i].z || 
-            dif.x < positions[i].z) velocities[i].x = -velocities[i].x;
-        if (dif.y > resolution.y - positions[i].z ||
-            dif.y < positions[i].z) velocities[i].y = -velocities[i].y;*/
 
         // Apply velocity to positions
 #define MAX_VEL 400.0f
@@ -207,7 +197,7 @@ int main(int argc, char** argv)
     glee_window_create("gravity2D", (int)resolution.x, (int)resolution.y, fullscreen, 0);
     glee_screen_color(0.0, 0.0, 0.0, 1.0);
 
-    glee_buffer_quad_create();
+    unsigned int quad = glee_buffer_quad_create();
     unsigned int shader_back = glee_shader_load("shaders/vert.glsl", "shaders/frag.glsl");
     glee_shader_uniform_set(shader_back, 2, "u_resolution", &resolution);
     unsigned int shader_circle = glee_shader_load("shaders/vert.glsl", "shaders/circle.glsl");
