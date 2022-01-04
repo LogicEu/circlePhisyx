@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
 #include <glee.h>
 #include <photon.h>
 
@@ -10,7 +13,9 @@ vec2 mouse, resolution;
 
 vec3 rand_position()
 {
-    float z = randf_norm() * 50.0f + 10.0f;
+#define RAD_MIN 10.0f
+#define RAD_MAX 20.0
+    float z = randf_norm() * RAD_MAX + RAD_MIN;
     vec3 v = {
         randf_norm() * (resolution.x - 2.0 * z) + z,
         randf_norm() * (resolution.y - 2.0 * z) + z,
@@ -41,9 +46,15 @@ vec4 color_neg(vec4 color)
     return c;
 }
 
+vec2 vec2_lerp(vec2 v1, vec2 v2)
+{
+    vec2 v = {lerpf(v1.x, v2.x, 0.5), lerpf(v1.y, v2.y, 0.5)};
+    return v;
+}
+
 void spawn_circles(const unsigned int count, vec3* positions, vec4* colors, vec2* velocities)
 {
-    for (int i = 0; i < count; i++) {
+    for (unsigned int i = 0; i < count; i++) {
         velocities[i] = vec2_uni(0.0);
         colors[i] = rand_color();
         positions[i] = rand_position();
@@ -63,7 +74,7 @@ void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* p
 {
     unsigned int mouseDown = glee_mouse_down(GLFW_MOUSE_BUTTON_LEFT);
 
-    for (int i = 0; i < count; i++) {
+    for (unsigned int i = 0; i < count; i++) {
 
         if (circle_point_overlap(*(Circle*)&positions[i], mouse)) {
             if (!marked[i]) {
@@ -85,7 +96,7 @@ void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* p
             positions[i].y + velocities[i].y * deltaTime
         };
 
-        for (int j = 0; j < count; j++) {
+        for (unsigned int j = 0; j < count; j++) {
             if (i == j) continue;
 
             //Apply gravity force to each velocity
@@ -103,16 +114,29 @@ void update(const unsigned int count, unsigned int shader, vec4* colors, vec3* p
             );
 
             if (circle_overlap_offset(*(Circle*)&positions[i], *(Circle*)&positions[j], vdif)) {
-                velocities[i] = vec2_mult(vec2_reflect(velocities[i], g), clampf(positions[j].z / positions[i].z, 0.0, 1.0));
-                velocities[j] = vec2_mult(vec2_reflect(velocities[j], g), clampf(positions[i].z / positions[j].z, 0.0, 1.0));
+                //velocities[i] = vec2_mult(vec2_reflect(velocities[i], g), clampf(positions[j].z / positions[i].z, 0.0, 1.0));
+                //velocities[j] = vec2_mult(vec2_reflect(velocities[j], g), clampf(positions[i].z / positions[j].z, 0.0, 1.0));
                 //velocities[i] = vec2_add(velocities[i], vec2_mult(vec2_reflect(velocities[i], g), maxf(positions[j].z / positions[i].z, 1.0)));
                 //velocities[j] = vec2_add(velocities[j], vec2_mult(vec2_reflect(velocities[j], g), maxf(positions[i].z / positions[j].z, 1.0)));
+                float M = positions[i].z + positions[j].z;
+                vec2 v1 = velocities[i], v2 = velocities[j];
+                velocities[i].x = ((positions[i].z - positions[j].z) / M) * v1.x + ((2.0 * positions[j].z) / M) * v2.x;
+                velocities[i].y = ((positions[i].z - positions[j].z) / M) * v1.y + ((2.0 * positions[j].z) / M) * v2.y;
+                float mag1 = vec2_mag(velocities[i]);
+                vec2 dir1 = vec2_mult(g, -mag1);
+
+                velocities[j].x = ((positions[j].z - positions[i].z) / M) * v2.x + ((2.0 * positions[i].z) / M) * v1.x;
+                velocities[j].y = ((positions[j].z - positions[i].z) / M) * v2.y + ((2.0 * positions[i].z) / M) * v1.y;
+                float mag2 = vec2_mag(velocities[j]);
+                vec2 dir2 = vec2_mult(g, mag2);
+
+                velocities[i] = vec2_lerp(dir1, velocities[i]);
+                velocities[j] = vec2_lerp(dir2, velocities[j]);
             }
 
             while(circle_overlap(*(Circle*)&positions[i], *(Circle*)&positions[j])) {
                 positions[i].x -= g.x;
                 positions[i].y -= g.y;
-                //velocities[i] = vec2_add(velocities[i], vec2_mult(g, 1.0));
             }
         }
 
@@ -172,19 +196,19 @@ int main(int argc, char** argv)
     glee_window_create("gravity2D", resolution.x, resolution.y, fullscreen, 0);
     glee_screen_color(0.0, 0.0, 0.0, 1.0);
 
-    vec2 res = resolution;
     glee_buffer_quad_create();
     unsigned int shader_back = glee_shader_load("shaders/vert.glsl", "shaders/frag.glsl");
-    glee_shader_uniform_set(shader_back, 2, "u_resolution", &res);
-    unsigned int shader_circle = glee_shader_load("shaders/circlev.glsl", "shaders/circlef.glsl");
-    glee_shader_uniform_set(shader_circle, 2, "u_resolution", &res);
+    glee_shader_uniform_set(shader_back, 2, "u_resolution", &resolution);
+    unsigned int shader_circle = glee_shader_load("shaders/vert.glsl", "shaders/circle.glsl");
+    glee_shader_uniform_set(shader_circle, 2, "u_resolution", &resolution);
     
-    int marked[count];
-    for (int i = 0; i < count; i ++) marked[i] = 0;
     vec2 velocities[count];
     vec3 positions[count];
     vec4 colors[count];
     spawn_circles(count, &positions[0], &colors[0], &velocities[0]);
+
+    int marked[count];
+    for (int i = 0; i < count; i ++) marked[i] = 0;
 
     float deltaTime, t = glee_time_get();
     while(glee_window_is_open()) {

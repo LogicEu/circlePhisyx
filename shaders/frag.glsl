@@ -10,7 +10,7 @@ void main()
     vec2 mouse = 2. * u_mouse / u_resolution.y;
 
     float n = 0.0;
-    if (length(mouse - uv) < 0.2) n = 1.0;
+    if (length(mouse - uv) < 0.04) n = 1.0;
 	vec3 color = vec3(uv.x, uv.y, (cos(u_time) + 1.0) * 0.5 + n);
-	FragColor = vec4(color, sin(u_time * 0.2) * 0.2 + 0.1);
+	FragColor = vec4(color, sin(u_time * 0.2) * 0.1 + n * 0.5);
 }
