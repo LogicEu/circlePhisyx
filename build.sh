@@ -21,6 +21,7 @@ lib=(
     -Llib/
     -lglee
     -lfract
+    -lphoton
     -lglfw
 )
 

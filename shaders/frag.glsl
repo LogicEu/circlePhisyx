@@ -11,6 +11,6 @@ void main()
 
     float n = 0.0;
     if (length(mouse - uv) < 0.2) n = 1.0;
-	vec3 color = vec3(uv.x, uv.y, cos(u_time) + n);
-	FragColor = vec4(color, 1.0);
+	vec3 color = vec3(uv.x, uv.y, (cos(u_time) + 1.0) * 0.5 + n);
+	FragColor = vec4(color, sin(u_time * 0.2) * 0.2 + 0.1);
 }

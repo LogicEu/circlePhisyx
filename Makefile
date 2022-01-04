@@ -7,7 +7,7 @@ WFLAGS=-Wall -Wextra
 OPT=-O2
 IDIR=-I.
 LDIR=lib
-SLIBS=glee fract
+SLIBS=glee fract photon
 DLIBS=glfw
 
 LSTATIC=$(patsubst %,lib%.a,$(SLIBS))
